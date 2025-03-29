@@ -1,3 +1,6 @@
+# Forked to work on RPI4
+
+
 # Forked to fix BLE (09.03.2023)
 - Zwift now works on both Windows and Android
 - Added logging to Web-UI: All logging info will be forwarded to the Web-UI console
