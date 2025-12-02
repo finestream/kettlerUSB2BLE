@@ -186,7 +186,7 @@ class FitnessControlPoint extends Bleno.Characteristic {
 
 	// Return the result message
 	buildResponse(opCode, resultCode) {
-		var buffer = new Buffer(3);
+		var buffer = Buffer.alloc(3);
 		buffer.writeUInt8(0x80, 0);
 		buffer.writeUInt8(opCode, 1);
 		buffer.writeUInt8(resultCode, 2);

@@ -73,16 +73,22 @@ class kettlerUSB extends EventEmitter {
 		//8: current power on eddy current brake
 		if (states.length == 8) {
 			var dataOut = {};
-			// puissance
+			// speed (column 3 - states[2], in tenths of km/h)
+			var speed = parseInt(states[2]);
+			if (!isNaN(speed)) {
+				dataOut.speed = speed * 0.1;
+			}
+			
+			// current power on brake (column 8 - states[7])
 			var power = parseInt(states[7]);
 			if (!isNaN(power)) {
 				dataOut.power = power;
 			}
-
-			// speed
-			var speed = parseInt(states[2]);
-			if (!isNaN(speed)) {
-				dataOut.speed = speed * 0.1;
+			
+			// target power (column 5 - states[4])
+			var targetPower = parseInt(states[4]);
+			if (!isNaN(targetPower)) {
+				dataOut.targetPower = targetPower;
 			}
 
 			// cadence
@@ -103,7 +109,7 @@ class kettlerUSB extends EventEmitter {
 				dataOut.rpm = rpm;
 			}
 
-			if (Object.keys(data).length > 0)
+			if (Object.keys(dataOut).length > 0)
 				this.emit('data', dataOut);
 		}
 		//                command: es 1

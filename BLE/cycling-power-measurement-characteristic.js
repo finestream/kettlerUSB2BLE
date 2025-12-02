@@ -52,7 +52,7 @@ class CyclingPowerMeasurementCharacteristic extends  Bleno.Characteristic {
   
     if (this._updateValueCallback) {
 		if (DEBUG) console.log("[powerService] Notify");
-		var buffer = new Buffer(8);
+		var buffer = Buffer.alloc(8);
 		// flags
 		// 00000001 - 1   - 0x001 - Pedal Power Balance Present
 		// 00000010 - 2   - 0x002 - Pedal Power Balance Reference

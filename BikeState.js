@@ -16,6 +16,7 @@ class BikeState extends EventEmitter {
 		this.external = null;
 		this.mode = 'ERG'; // ERG ou SIM
 		this.gear = 1;
+		this.targetPower = null; // Will be set from bike data when available
 	};
 
 	// Restart the trainer
@@ -32,6 +33,12 @@ class BikeState extends EventEmitter {
 	// Current state
 	setData(data) {
 		this.data = data;
+		// Initialize targetPower from bike data on first reception
+		if (this.targetPower === null && 'targetPower' in data) {
+			this.targetPower = data.targetPower;
+			console.log('[BikeState] Initialized targetPower from bike: ' + this.targetPower);
+			this.emit('targetPower', this.targetPower);
+		}
 		// update
 		this.compute();
 	};
@@ -61,20 +68,18 @@ class BikeState extends EventEmitter {
 	setTargetPower(power) {
 		this.mode = 'ERG'; // ERG
 		this.emit('mode', this.mode);
-		// update and compute
-		if (this.data == null)
-			return;
-		this.data.power = power;
-		this.emit('simpower', this.data.power);
+		this.targetPower = power;
+		this.emit('targetPower', this.targetPower);
+		this.emit('simpower', this.targetPower);
 	};
 
 	/* Modifie la puissance target */
 	addPower(increment) {
-		if (this.data == null)
-			return;
-		this.data.power += increment;
-		// update and compute
-		this.emit('simpower', this.data.power);
+		this.targetPower += increment;
+		// Clamp power between 0 and 1000W
+		this.targetPower = Math.max(0, Math.min(1000, this.targetPower));
+		this.emit('targetPower', this.targetPower);
+		this.emit('simpower', this.targetPower);
 	};
 
 	/* Mode Simulation : les conditions externes a simuler */

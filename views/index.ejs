@@ -7,87 +7,204 @@
 	   <script src="http://code.jquery.com/jquery-3.1.1.min.js"></script>
       <style>
 		 html, body {
-			height: 100%
+			height: 100%;
+			margin: 0;
+			padding: 0;
+			background-color: #222;
+			font-family: Arial, sans-serif;
 		}
-		 .BoldH {
-			font-weight: bold;
-		 }
 		 
-		table {
-		  width: 100%;
-		  height: 100%;
-		  font-size: 30px;
-		  text-align: center;
+		.BoldH {
+			font-weight: bold;
+			font-size: 24px;
 		}
-
-		td {
-		  width: 30%;
-		  height: 30%;
+		
+		#phone {
+			width: 100%;
+			height: 100%;
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+			grid-template-rows: auto 1fr 1fr;
+			gap: 5px;
+			padding: 5px;
+			box-sizing: border-box;
 		}
-		.numbers{
-			font-weight:900;
-			font-size:100px;
+		
+		.data-row {
+			grid-column: 1 / -1;
+			display: grid;
+			grid-template-columns: repeat(5, 1fr);
+			gap: 5px;
+		}
+		
+		.cell {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			background-color: #333;
+			border: 2px solid #555;
+			border-radius: 5px;
+			padding: 10px;
+			box-sizing: border-box;
+		}
+		
+		.data-cell {
+			background-color: #1a1a1a;
+			color: #0f0;
+		}
+		
+		.numbers {
+			font-weight: 900;
+			font-size: 60px;
+			color: #0f0;
+			line-height: 1;
+		}
+		
+		.unit {
+			font-size: 16px;
+			color: #0f0;
+			margin-top: 5px;
 		}
 		
 		button {
-		  height: 100%;
 		  width: 100%;
-		  margin: 5px;
-		  background-color: #7db9e8;
-		  font-size:60px;
+		  height: 100%;
+		  background-color: #0066cc;
+		  color: white;
+		  font-size: 32px;
+		  font-weight: bold;
+		  border: 2px solid #0052a3;
+		  border-radius: 5px;
+		  cursor: pointer;
+		  transition: all 0.1s;
+		  min-height: 80px;
 		}
 		
-		button:active{
-			background:olive;
+		button:hover {
+			background-color: #0080ff;
 		}
 		
-	 
+		button:active {
+			background-color: #00ff00;
+			color: #000;
+		}
+		
+		#mode {
+			background-color: #006600;
+			color: #0f0;
+			font-size: 50px;
+			font-weight: bold;
+			border: 3px solid #00ff00;
+			cursor: pointer;
+			min-height: 100px;
+			width: 100%;
+			height: 100%;
+		}
+		
+		#mode:hover {
+			background-color: #008800;
+			box-shadow: 0 0 15px #00ff00;
+		}
+		
+		.hidden {
+			visibility: hidden;
+		}
       </style>
       <script type="text/javascript">
-         var socket = io.connect("192.168.1.36:3000");
+         var socket = io.connect("192.168.1.63:3000");
+         
          socket.on('speed', function (data) {  
 			$('#speed').html(data);
          });
+		 
+		 socket.on('targetPower', function (data) {  
+			$('#targetPower').html(Math.round(data));
+         });
+		 
+		 socket.on('simpower', function (data) {  
+			$('#targetPower').html(Math.round(data));
+         });
+		 
 		 socket.on('hr', function (data) {  
 			$('#heartrate').html(data);
          });
+		 
 		 socket.on('power', function (data) {  
 			$('#power').html(data);
          });
+		 
 		 socket.on('gear', function (data) {  
 			$('#gear').html(data);
          });
+		 
 		 socket.on('windspeed', function (data) {  
 			$('#windspeed').html(data);
          });
+		 
 		 socket.on('grade', function (data) {  
 			$('#grade').html(data);
          });
+		 
+		 socket.on('windspeed', function (data) {  
+			$('#windspeed').html(data);
+         });
+		 
+		 socket.on('grade', function (data) {  
+			$('#grade').html(data);
+         });
+		 
 		 socket.on('mode', function (data) {  
 			$('#mode').html(data);
-         });
-		 socket.on('mode', function (data) {  
-			if (data==='ERG')
-			{
-				$('#keyLeft').attr("data-value", "PowerDn");
-				$('#keyLeft').html("Power Dn");
-				$('#keyRight').attr("data-value", "PowerUp");
-				$('#keyRight').html("Power Up");
+			
+			// Replace entire cell content based on mode
+			if (data === 'SIM') {
+				// SIM mode: replace power controls with gear controls
+				$('#cellLeft').html('<button data-value="GearDn" id="gearDown" class="control-btn">- Gear</button>');
+				$('#cellRight').html('<button data-value="GearUp" id="gearUp" class="control-btn">+ Gear</button>');
+				
+				// Re-attach click handlers to new buttons
+				$('#gearDown').click(function(){
+					socket.emit('key', $(this).attr("data-value"));
+					return false;
+				});
+				$('#gearUp').click(function(){
+					socket.emit('key', $(this).attr("data-value"));
+					return false;
+				});
+			} else {
+				// ERG mode: replace gear controls with power controls
+				$('#cellLeft').html('<button data-value="PowerDn" id="keyLeft" class="control-btn">- Pwr</button>');
+				$('#cellRight').html('<button data-value="PowerUp" id="keyRight" class="control-btn">+ Pwr</button>');
+				
+				// Re-attach click handlers to new buttons
+				$('#keyLeft').click(function(){
+					socket.emit('key', $(this).attr("data-value"));
+					return false;
+				});
+				$('#keyRight').click(function(){
+					socket.emit('key', $(this).attr("data-value"));
+					return false;
+				});
 			}
-			else
-			{
-				$('#keyLeft').attr("data-value", "GearDn");
-				$('#keyLeft').html( "Gear Dn");
-				$('#keyRight').attr("data-value", "GearUp");
-				$('#keyRight').html( "Gear Up");
-			}
          });
+		 
 		 $(function () {
-			var socket = io();
 			 $('button').click(function(){
 				socket.emit('key', $(this).attr("data-value"));
 				return false;
 			 });
+			 
+			 // Mode switcher - click on mode display to toggle
+			 $('#mode').click(function(){
+				var currentMode = $(this).html();
+				var newMode = currentMode === 'ERG' ? 'SIM' : 'ERG';
+				socket.emit('mode', newMode);
+			 });
+			 
+			 // Make mode clickable
+			 $('#mode').css('cursor', 'pointer');
+			 $('#mode').css('padding', '10px');
 		 });
       </script>
    </head>
@@ -96,49 +213,66 @@
 <div id="dialog" title="Basic dialog">
 </div>
 
-	 <table id="phone">
- 
-		  <tr>
-			<td> 
-				<div class="BoldH">Speed</div>
-				<div class="numbers" id="speed">0</div>  
-			</td>
-			<td>
-			  <div class="BoldH">Power</div>
-				<div class="numbers" id="power">0</div>   
-			</td>
-			<td>
-				<div class="BoldH" >Vent</div>
-				<div class="numbers" id="windspeed">0</div>  
-			</td>
-		  </tr>
-		  <tr>
-			<td>
-			  <button data-value="PowerDn" id="keyLeft">OFF</button>
-			</td>
-			<td> 
-				<div class="BoldH" id="mode">RAS</div>   
-			</td>
-			</td>
-			<td>
-			  <button data-value="PowerUp" id="keyRight">OFF</button>
-			</td>
-		  </tr>
-		  <tr>
-			<td> 
-				<div class="BoldH">Gear</div>
-				<div class="numbers" id="gear">1</div>   
-			</td>
-			<td>
-			  <button data-value="pause" class="key">Pause</button>
-			</td>
-			<td>
-				<div class="BoldH">Pente</div>
-				<div class="numbers" id="grade">0%</div>   
-			</td>
-		  </tr>
-				   
-	  </table>
+<div id="phone">
+	<!-- ROW 1: Data (Speed, Power, HR, Wind, Grade) - All visible always -->
+	<div class="data-row">
+		<div class="cell data-cell"> 
+			<div class="BoldH">Speed</div>
+			<div class="numbers" id="speed">0</div>
+			<div class="unit">km/h</div>
+		</div>
+		<div class="cell data-cell">
+			<div class="BoldH">Power</div>
+			<div class="numbers" id="power">0</div>
+			<div class="unit">W</div>
+		</div>
+		<div class="cell data-cell">
+			<div class="BoldH">HR</div>
+			<div class="numbers" id="hr">0</div>
+			<div class="unit">bpm</div>
+		</div>
+		<div class="cell data-cell">
+			<div class="BoldH">Wind</div>
+			<div class="numbers" id="windspeed">0</div>
+			<div class="unit">km/h</div>
+		</div>
+		<div class="cell data-cell">
+			<div class="BoldH">Grade</div>
+			<div class="numbers" id="grade">0</div>
+			<div class="unit">%</div>
+		</div>
+	</div>
+	
+	<!-- ROW 2: Control Left | MODE | Control Right -->
+	<!-- Grid Cell 1 (left): -Power (ERG) or -Gear (SIM) -->
+	<div class="cell" id="cellLeft">
+		<button data-value="PowerDn" id="keyLeft" class="control-btn">- Pwr</button>
+	</div>
+	
+	<!-- Grid Cell 2 (center): MODE -->
+	<div class="cell" style="background-color: #000; border: 3px solid #00ff00;"> 
+		<button id="mode" style="border: none; background-color: #006600;">ERG</button>   
+	</div>
+	
+	<!-- Grid Cell 3 (right): +Power (ERG) or +Gear (SIM) -->
+	<div class="cell" id="cellRight">
+		<button data-value="PowerUp" id="keyRight" class="control-btn">+ Pwr</button>
+	</div>
+	
+	<!-- ROW 3: Gear | Pause | Target Power -->
+	<div class="cell data-cell"> 
+		<div class="BoldH">Gear</div>
+		<div class="numbers" id="gear">1</div>   
+	</div>
+	<div class="cell">
+		<button data-value="pause" id="pauseBtn">PAUSE</button>
+	</div>
+	<div class="cell data-cell">
+		<div class="BoldH">Target</div>
+		<div class="numbers" id="targetPower">100</div>
+		<div class="unit">W</div>
+	</div>
+</div>
    
    </body>
 </html>

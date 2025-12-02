@@ -30,44 +30,14 @@ app.get('/', function (req, res) {
 server = app.listen(3000, function () {
 		console.log('Kettler app listening on port 3000!');
 	});
-const io = require("socket.io")(server);
-io.on('connection', (socket) => {
-	socket.on('key', function (ev) {
-		console.log('key' + ev);
-		switch (ev) {
-		case 'PowerUp':
-			bikeState.addPower(20);
-			break;
-		case 'PowerDn':
-			bikeState.addPower(-20);
-			break;
-		case 'GearUp':
-			bikeState.GearUp();
-			break;
-		case 'GearDn':
-			bikeState.GearDown();
-			break;
-		case 'pause':
-			bikeState.setTargetPower(140);
-			break;
-		}
-	});
+const io = require("socket.io")(server, {
+	cors: {
+		origin: "*",
+		methods: ["GET", "POST"]
+	}
 });
 
-//--- Buttons
-var button = new Button(7);
-button.on('clicked', function () {
-	bikeState.GearUp();
-});
- var button = new Button(11);
-button.on('clicked', function () {
-	bikeState.GearDown();
-});
- 
-//--- Oled Screen
-//var oled = new Oled();
-
-//--- Machine State
+//--- Machine State (must be created BEFORE socket connection handler)
 var bikeState = new BikeState();
 // un peu de retour serveur
 bikeState.on('mode', (mode) => {
@@ -85,10 +55,76 @@ bikeState.on('windspeed', (windspeed) => {
 	io.emit('windspeed', windspeed);
 });
 bikeState.on('simpower', (simpower) => {
+	io.sockets.emit('simpower', simpower);
 	kettlerUSB.setPower(simpower);
+});
+bikeState.on('targetPower', (targetPower) => {
+	io.sockets.emit('targetPower', targetPower);
 });
 // first state
 bikeState.setGear(4);
+
+io.on('connection', (socket) => {
+	console.log('Socket client connected');
+	// Send current target power to new client
+	socket.emit('targetPower', bikeState.targetPower);
+	
+	socket.on('key', function (ev) {
+		console.log('key event received: ' + ev);
+		switch (ev) {
+		case 'PowerUp':
+			console.log('Power Up command');
+			bikeState.addPower(20);
+			break;
+		case 'PowerDn':
+			console.log('Power Down command');
+			bikeState.addPower(-20);
+			break;
+		case 'GearUp':
+			console.log('Gear Up command');
+			bikeState.GearUp();
+			break;
+		case 'GearDn':
+			console.log('Gear Down command');
+			bikeState.GearDown();
+			break;
+		case 'pause':
+			console.log('Pause command');
+			bikeState.setTargetPower(140);
+			break;
+		default:
+			console.log('Unknown key event: ' + ev);
+		}
+	});
+	
+	socket.on('mode', function (newMode) {
+		console.log('Mode switch requested: ' + newMode);
+		if (newMode === 'SIM') {
+			console.log('Switching to SIM mode');
+			bikeState.setExternalCondition(0, 3, 0.005, 0.39);
+		} else if (newMode === 'ERG') {
+			console.log('Switching to ERG mode');
+			bikeState.setTargetPower(100);
+		}
+	});
+	
+	socket.on('disconnect', function() {
+		console.log('Socket client disconnected');
+	});
+});
+
+//--- Buttons
+var button = new Button(7);
+button.on('clicked', function () {
+	bikeState.GearUp();
+});
+ var button = new Button(11);
+button.on('clicked', function () {
+	bikeState.GearDown();
+});
+ 
+//--- Oled Screen
+//var oled = new Oled();
 
 //--- Serial port
 var kettlerUSB = new kettlerUSB();
@@ -111,6 +147,8 @@ kettlerUSB.on('data', (data) => {
 		io.emit('speed', data.speed.toFixed(1));
 	if ('power' in data)
 		io.emit('power', data.power);
+	if ('targetPower' in data)
+		io.emit('targetPower', data.targetPower);
 	if ('hr' in data)
 		io.emit('hr', data.hr);
 	if ('rpm' in data)
