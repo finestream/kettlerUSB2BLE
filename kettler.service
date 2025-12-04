@@ -1,5 +1,5 @@
 [Service]
-ExecStartPre=/usr/bin/hciconfig hci0 up
+ExecStartPre=/usr/bin/sudo /usr/bin/hciconfig hci0 up
 ExecStartPre=/bin/sleep 2
 ExecStart=sudo /usr/local/bin/node server.js
 Restart=always
