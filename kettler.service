@@ -4,12 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/kettlerUSB2BLE
+User=root
+Group=root
+WorkingDirectory=/home/kettler/kettlerUSB2BLE
 ExecStartPre=/usr/bin/hciconfig hci0 up
 ExecStartPre=/bin/sleep 2
-ExecStart=/usr/bin/node /home/pi/kettlerUSB2BLE/server.js
+ExecStart=/usr/bin/node /home/kettler/kettlerUSB2BLE/server.js
 Restart=always
 RestartSec=10
 StandardOutput=journal
