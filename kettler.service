@@ -1,15 +1,18 @@
 [Unit]
 Description=Kettler USB to BLE Bridge Service
-After=network.target
+After=network.target bluetooth.target
+Requires=bluetooth.target
 
 [Service]
 Type=simple
-User=root
-Group=root
+User=kettler
+Group=kettler
 WorkingDirectory=/home/kettler/kettlerUSB2BLE
-ExecStartPre=/usr/bin/hciconfig hci0 up
-ExecStartPre=/bin/sleep 2
-ExecStart=/usr/bin/node /home/kettler/kettlerUSB2BLE/server.js
+Environment="PYTHONUNBUFFERED=1"
+# Grant necessary capabilities for Bluetooth
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+ExecStart=/usr/bin/python3 /home/kettler/kettlerUSB2BLE/server.py
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -3,8 +3,8 @@
    <head>
       <meta charset="utf-8">
       <title>Bike Controler</title>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
-	   <script src="http://code.jquery.com/jquery-3.1.1.min.js"></script>
+      <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+	   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
       <style>
 		 html, body {
 			height: 100%;
@@ -110,9 +110,69 @@
 		.hidden {
 			visibility: hidden;
 		}
+		
+		/* Status banner */
+		#statusBanner {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			background-color: #ff4444;
+			color: white;
+			padding: 10px;
+			text-align: center;
+			font-weight: bold;
+			z-index: 1000;
+			display: none;
+		}
+		
+		#statusBanner.error {
+			background-color: #ff4444;
+		}
+		
+		#statusBanner.warning {
+			background-color: #ff8800;
+		}
+		
+		/* Status icons */
+		.status-bar {
+			position: fixed;
+			top: 5px;
+			right: 5px;
+			display: flex;
+			gap: 10px;
+			z-index: 1001;
+		}
+		
+		.status-icon {
+			width: 50px;
+			height: 50px;
+			border-radius: 50%;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			font-size: 24px;
+			font-weight: bold;
+			border: 3px solid #333;
+			background-color: #ff4444;
+			color: #fff;
+			box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+		}
+		
+		.status-icon.connected {
+			background-color: #00ff00;
+			color: #000;
+			border-color: #00aa00;
+		}
+		
+		.status-icon span {
+			font-size: 9px;
+			margin-top: 2px;
+		}
       </style>
       <script type="text/javascript">
-         var socket = io.connect("192.168.1.63:3000");
+         var socket = io();
          
          socket.on('speed', function (data) {  
 			$('#speed').html(data);
@@ -189,6 +249,61 @@
 			}
          });
 		 
+		 // Initialize status variables
+		 var usbConnected = false;
+		 var bleEnabled = false;
+		 var usbError = 'Bike not connected';
+		 var bleError = null;
+		 
+		 // Status handlers
+		 socket.on('usbStatus', function (status) {
+			console.log('USB Status:', status);
+			usbConnected = status.connected;
+			usbError = status.error;
+			
+			// Update icon
+			if (status.connected) {
+				$('#usbIcon').addClass('connected').attr('title', 'USB Connected');
+			} else {
+				$('#usbIcon').removeClass('connected').attr('title', status.error || 'USB Disconnected');
+			}
+			
+			updateStatusBanner();
+		 });
+		 
+		 socket.on('bleStatus', function (status) {
+			console.log('BLE Status:', status);
+			bleEnabled = status.enabled;
+			bleError = status.error;
+			
+			// Update icon
+			if (status.enabled) {
+				$('#bleIcon').addClass('connected').attr('title', 'Bluetooth Enabled');
+			} else {
+				$('#bleIcon').removeClass('connected').attr('title', status.error || 'Bluetooth Disabled');
+			}
+			
+			updateStatusBanner();
+		 });
+		 
+		 function updateStatusBanner() {
+			var messages = [];
+			
+			if (!usbConnected && usbError) {
+				messages.push(usbError);
+			}
+			
+			if (!bleEnabled && bleError) {
+				messages.push(bleError);
+			}
+			
+			if (messages.length > 0) {
+				$('#statusBanner').text(messages.join(' | ')).show();
+			} else {
+				$('#statusBanner').hide();
+			}
+		 }
+		 
 		 $(function () {
 			 $('button').click(function(){
 				socket.emit('key', $(this).attr("data-value"));
@@ -210,6 +325,17 @@
    </head>
    <body>
   
+<div class="status-bar">
+	<div class="status-icon" id="bleIcon" title="Bluetooth Disabled">
+		BT<span>BLE</span>
+	</div>
+	<div class="status-icon" id="usbIcon" title="USB Disconnected">
+		🔌<span>USB</span>
+	</div>
+</div>
+
+<div id="statusBanner" class="error"></div>
+
 <div id="dialog" title="Basic dialog">
 </div>
 
