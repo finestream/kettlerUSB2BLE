@@ -9,13 +9,15 @@ class KettlerBLE extends EventEmitter {
 		super();
 
 		this.name = "KettlerBLE";
-		process.env['BLENO_DEVICE_NAME'] = this.name; 
+		process.env['BLENO_DEVICE_NAME'] = this.name;
+		process.env['DEBUG'] = 'bleno*';
 
 		this.csp = new CyclingPowerService();
 		this.ftms = new FitnessMachineService(serverCallback); 
 
 		let self = this;
 		console.log(`[${this.name} starting]`);
+		console.log(`[${this.name}] Bleno init state: ${bleno.state}`);
 
 		bleno.on('stateChange', (state) => {
 			console.log(`[${this.name} stateChange] new state: ${state}`);
@@ -23,6 +25,7 @@ class KettlerBLE extends EventEmitter {
 			self.emit('stateChange', state);
 
 			if (state === 'poweredOn') {
+				console.log(`[${this.name}] Starting advertising...`);
 				bleno.startAdvertising(self.name, [self.csp.uuid
 				, self.ftms.uuid
 				]);
