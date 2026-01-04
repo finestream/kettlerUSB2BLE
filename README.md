@@ -4,13 +4,20 @@ This software is a bridge between an old KettlerBike with USB Serial port to a f
 * there is also a Cadence sensor, power meter and other services
 * In SIM mode : It implements a Power Curve to fit to external feeling.
 
-it's a work in progress:
-* Working on the power curve
-* Implementing Gear Shift
-* Using Momentary buttons to shift gear up and down
-* Oled screen feedback
+## Implemented Features
+* **Gear Shift** - Full support with web UI buttons and GPIO momentary buttons
+* **Momentary buttons** - GPIO pins 7 (Gear Down) and 11 (Gear Up) for hardware control
+* **Power Curve** - Implemented for SIM mode with physics-based calculations
 
-I was able to test it on a Kettler Ergorace (https://www.bikeradar.com/reviews/training/indoor-trainers/resistance-trainer/kettler-ergorace-trainer-review/) and ZWIFT.
+## Future Enhancements
+* Power Curve fine-tuning and configuration
+* OLED screen feedback (code ready, needs testing and wiring)
+* Advanced sim parameters
+
+## Tested Hardware
+- **Kettler Ergorace** (https://www.bikeradar.com/reviews/training/indoor-trainers/resistance-trainer/kettler-ergorace-trainer-review/)
+- **MyWhoosh Bike Trainer**
+- Compatible with ZWIFT, MyWhoosh, and other FTMS-enabled cycling apps
 
 ## Minimal requirements
 You need a Raspeberyy Pi zero W. The "W" version is important as you need the bluetooth version.
@@ -48,56 +55,114 @@ Follow these instructions:
 https://opensource.com/article/17/3/how-write-sd-cards-raspberry-pi
 
 
-## setup
-Install on a rasperypi zero with nodejs (version 8, some lib are not compiling on Node 10).
+## Setup
 
-### Power
-We  need to enable 1.2A USB power draw mode, otherwise the RPi limits the draw to 0.6A:
+### Pi Zero 2W on Debian Bookworm 64-bit ARM (Manual Setup)
+
+#### Step 1: Update system packages
+```bash
+sudo apt update && sudo apt upgrade -y
 ```
-/boot/config.txt
----
-# Force 1.2A USB draw
+
+#### Step 2: Install dependencies
+```bash
+sudo apt install -y bluetooth bluez libbluetooth-dev libudev-dev \
+  git python3-dev build-essential libncurses-dev libreadline-dev \
+  usbutils curl wget
+```
+
+#### Step 3: Install Node.js (v20 LTS)
+For Pi Zero 2W with Bookworm 64-bit ARM:
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node --version  # Verify installation
+npm --version
+```
+
+#### Step 4: Disable Bluetooth service
+Bleno implements its own Bluetooth stack, so we need to disable the system service:
+```bash
+sudo systemctl disable bluetooth
+sudo systemctl stop bluetooth
+```
+
+#### Step 5: Enable Bluetooth hardware
+Prepare the Bluetooth interface (will be managed by Bleno):
+```bash
+sudo hciconfig hci0 up
+```
+
+#### Step 6: Clone and install KettlerUSB2BLE
+```bash
+cd ~
+git clone https://github.com/360manu/kettlerUSB2BLE.git
+cd ~/kettlerUSB2BLE
+npm install
+```
+
+**Note:** This step compiles Bleno from source and may take 5-10 minutes on a Pi Zero 2W. Do NOT use sudo for npm install as it breaks the build.
+
+#### Step 7: Copy the systemd service file
+The service file is included in the repository. Copy and enable it:
+```bash
+sudo cp ~/kettlerUSB2BLE/kettler.service /etc/systemd/system/
+sudo systemctl daemon-reload
+```
+
+#### Step 8: Enable and start the service
+```bash
+sudo systemctl enable kettler.service
+sudo systemctl start kettler.service
+```
+
+#### Step 9: Verify the service is running
+```bash
+sudo systemctl status kettler.service
+journalctl -u Kettler -f  # View live logs (uses SyslogIdentifier)
+```
+
+#### Step 10: USB Power Configuration (Optional but recommended)
+To ensure sufficient power for the Bluetooth operations:
+
+Edit `/boot/firmware/config.txt`:
+```bash
+sudo nano /boot/firmware/config.txt
+```
+
+Add this line (or modify if exists):
+```
 max_usb_current=1
 ```
 
-### NodeJS
-nodejs :  follow the link below and find a list of scripts.
-Just run the ```wget``` of the selected version, and ... you have a node with the coreect version.
-https://github.com/sdesalas/node-pi-zero
-version 8.10 is OK
-
-### BLeno special setup
-We use the great bleno (from abandonware for continuous support) library for simulating a Bluetooth Peripheral followin the gatt FTMS protocol.
-see https://github.com/noble/bleno
-
-Stop the bluetooth service (Bleno implements another stack)
-```
-sudo systemctl disable bluetooth
-sudo hciconfig hci0 up
-```
-install lib
-```
-sudo apt-get install bluetooth bluez libbluetooth-dev libudev-dev
+Reboot for changes to take effect:
+```bash
+sudo reboot
 ```
 
-### KettlerUSB2BLE
-* download the sources
-```
-git clone https://github.com/360manu/kettlerUSB2BLE.git
-cd kettlerUSB2BLE
-```
+### Connection Setup
 
-* Install
-!! No Sudo for node install. It breaks the compilation
-```
-npm install
-```
-it can take a while as bleno must be compiled from sources.
+1. **Plug in the Kettler bike:** Connect a USB cable from the Pi Zero 2W's data USB port (the center micro-USB port) to your Kettler bike's USB port.
+   - Use a USB-A to micro-USB-B cable or adapter
 
-### Bike Setup
-just plug an USB cable from your PI (data USB, the central one) to the USB
-I personnaly use 2 cables
-* One Mini USB to USB B
+2. **Access the web interface:** Once the service is running, open your browser and navigate to:
+   ```
+   http://<pi-ip-address>:3000
+   ```
+
+3. **Pair with Zwift/compatible apps:** Your Kettler bike should now appear as a Bluetooth peripheral (FTMS compatible) ready to pair with cycling apps.
+
+### Troubleshooting
+
+- **Service won't start:** Check logs with `journalctl -u Kettler -f` or `sudo systemctl status kettler.service`
+- **Bluetooth not found:** Verify `sudo hciconfig` shows `hci0 UP RUNNING`
+- **USB connection issues:** Try a different USB cable or check `dmesg` for device recognition
+- **npm install fails:** Ensure you're using the `pi` user (not sudo) and have enough disk space
+- **sudo: command not found in service:** The service uses `sudo` in ExecStart - ensure the `pi` user has passwordless sudo configured
+
+### Legacy Setup Notes
+
+For older Pi Zero W with Raspbian Jessie/Stretch, see the original instructions above. The new setup is optimized for Pi Zero 2W with modern Debian distributions.
 * an old one from USB B to USB A
 it's not very clean but it works
 
@@ -141,8 +206,3 @@ sudo systemctl link /home/pi/kettlerUSB2BLE/kettler.service
 sudo systemctl enable kettler.service
 sudo systemctl start kettler.service
 ```
-
-## future
-* Power Curve description with config
-* Oled feedback
-* Gear Shift
