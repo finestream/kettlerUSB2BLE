@@ -73,10 +73,6 @@ class KettlerBLE extends EventEmitter {
 			console.log(`[${this.name} rssiUpdate]: ${rssi}`);
 		});
 
-		// Initialize Bleno HCI
-		console.log(`[${this.name}] Initializing Bleno HCI...`);
-		bleno.init();
-
 	}
 
 	// notifiy BLE services
