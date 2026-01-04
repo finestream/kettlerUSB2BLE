@@ -1,14 +1,20 @@
+[Unit]
+Description=Kettler USB to BLE Bridge Service
+After=network.target
+
 [Service]
-ExecStartPre=/usr/bin/sudo /usr/bin/hciconfig hci0 up
-ExecStartPre=/bin/sleep 2
-ExecStart=sudo /usr/bin/node server.js
-Restart=always
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=Kettler
+Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/KettlerUSB
+WorkingDirectory=/home/pi/kettlerUSB2BLE
+ExecStartPre=/usr/bin/hciconfig hci0 up
+ExecStartPre=/bin/sleep 2
+ExecStart=/usr/bin/node /home/pi/kettlerUSB2BLE/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=Kettler
 
 [Install]
 WantedBy=multi-user.target
