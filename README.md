@@ -16,7 +16,6 @@ This software is a bridge between an old KettlerBike with USB Serial port to a f
 
 ## Tested Hardware
 - **Kettler Ergorace** (https://www.bikeradar.com/reviews/training/indoor-trainers/resistance-trainer/kettler-ergorace-trainer-review/)
-- **MyWhoosh Bike Trainer**
 - Compatible with ZWIFT, MyWhoosh, and other FTMS-enabled cycling apps
 
 ## Minimal requirements

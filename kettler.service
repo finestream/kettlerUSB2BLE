@@ -1,7 +1,7 @@
 [Service]
 ExecStartPre=/usr/bin/sudo /usr/bin/hciconfig hci0 up
 ExecStartPre=/bin/sleep 2
-ExecStart=sudo /usr/local/bin/node server.js
+ExecStart=sudo /usr/bin/node server.js
 Restart=always
 StandardOutput=syslog
 StandardError=syslog
