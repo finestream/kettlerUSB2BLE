@@ -137,7 +137,7 @@ class KettlerBLE:
             notifying=False,
             flags=['write', 'indicate'],
             write_callback=self._handle_control_point_write,
-            indicate_callback=self._control_point_indicate_callback
+            notify_callback=self._control_point_indicate_callback
         )
         
         # Fitness Machine Feature (Read)
@@ -238,20 +238,28 @@ class KettlerBLE:
     
     def _send_control_point_response(self, opcode: int, result_code: int):
         """Send response indication to control point (0x80 response)"""
-        if self.control_point_char and self.control_point_char.is_notifying:
-            response = [0x80, opcode, result_code]
-            self.control_point_char.set_value(response)
-            logger.debug(f'[{self.name}] → Sent control response: opcode=0x{opcode:02X}, result=0x{result_code:02X}')
-        else:
-            logger.warning(f'[{self.name}] Cannot send control response - no indication subscription')
+        response = [0x80, opcode, result_code]
+        logger.info(f'[{self.name}] → Sending control response: opcode=0x{opcode:02X}, result=0x{result_code:02X}')
         
-    def _handle_control_point_write(self, value: bytes):
+        if self.control_point_char:
+            try:
+                self.control_point_char.set_value(response)
+                logger.info(f'[{self.name}] ✓ Control response sent successfully')
+            except Exception as e:
+                logger.error(f'[{self.name}] ✗ Failed to send control response: {e}')
+        else:
+            logger.warning(f'[{self.name}] Cannot send control response - characteristic not available')
+        
+    def _handle_control_point_write(self, value, options):
         """Handle writes to Fitness Control Point characteristic"""
+        logger.info(f'[{self.name}] Control Point write received: {len(value) if value else 0} bytes, options: {options}')
+        
         if not value or len(value) == 0:
+            logger.warning(f'[{self.name}] Empty control point write')
             return
             
         opcode = value[0]
-        logger.info(f'[{self.name}] Control Point opcode: 0x{opcode:02X}')
+        logger.info(f'[{self.name}] Control Point opcode: 0x{opcode:02X} (bytes: {bytes(value).hex()})')
         
         # Result codes (FTMS spec)
         RESULT_SUCCESS = 0x01
