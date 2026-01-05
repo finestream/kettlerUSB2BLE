@@ -61,6 +61,7 @@ class KettlerBLE:
         self.indoor_bike_char = None
         self.cycling_power_char = None
         self.machine_status_char = None
+        self.control_point_char = None
         
         logger.info(f'[{self.name}] Initializing on adapter {self.adapter_address}')
         
@@ -135,7 +136,8 @@ class KettlerBLE:
             value=[],
             notifying=False,
             flags=['write', 'indicate'],
-            write_callback=self._handle_control_point_write
+            write_callback=self._handle_control_point_write,
+            indicate_callback=self._control_point_indicate_callback
         )
         
         # Fitness Machine Feature (Read)
@@ -224,6 +226,24 @@ class KettlerBLE:
         else:
             logger.info(f'[{self.name}] Machine Status notifications DISABLED')
             self.machine_status_char = None
+    
+    def _control_point_indicate_callback(self, indicating, characteristic):
+        """Called when client subscribes/unsubscribes to Control Point indications"""
+        if indicating:
+            logger.info(f'[{self.name}] Control Point indications ENABLED')
+            self.control_point_char = characteristic
+        else:
+            logger.info(f'[{self.name}] Control Point indications DISABLED')
+            self.control_point_char = None
+    
+    def _send_control_point_response(self, opcode: int, result_code: int):
+        """Send response indication to control point (0x80 response)"""
+        if self.control_point_char and self.control_point_char.is_notifying:
+            response = [0x80, opcode, result_code]
+            self.control_point_char.set_value(response)
+            logger.debug(f'[{self.name}] → Sent control response: opcode=0x{opcode:02X}, result=0x{result_code:02X}')
+        else:
+            logger.warning(f'[{self.name}] Cannot send control response - no indication subscription')
         
     def _handle_control_point_write(self, value: bytes):
         """Handle writes to Fitness Control Point characteristic"""
@@ -233,49 +253,88 @@ class KettlerBLE:
         opcode = value[0]
         logger.info(f'[{self.name}] Control Point opcode: 0x{opcode:02X}')
         
+        # Result codes (FTMS spec)
+        RESULT_SUCCESS = 0x01
+        RESULT_OP_CODE_NOT_SUPPORTED = 0x02
+        RESULT_INVALID_PARAMETER = 0x03
+        RESULT_OPERATION_FAILED = 0x04
+        RESULT_CONTROL_NOT_PERMITTED = 0x05
+        
         try:
             if opcode == 0x00:  # Request Control
                 logger.info(f'[{self.name}] → Request Control')
-                if self.control_callback and self.control_callback('control'):
-                    self.under_control = True
-                    logger.info(f'[{self.name}] ✓ Control granted')
+                if not self.under_control:
+                    if self.control_callback and self.control_callback('control'):
+                        self.under_control = True
+                        logger.info(f'[{self.name}] ✓ Control granted')
+                        self._send_control_point_response(opcode, RESULT_SUCCESS)
+                    else:
+                        logger.warning(f'[{self.name}] ✗ Control request failed')
+                        self._send_control_point_response(opcode, RESULT_OPERATION_FAILED)
+                else:
+                    logger.info(f'[{self.name}] Already under control')
+                    self._send_control_point_response(opcode, RESULT_SUCCESS)
                     
             elif opcode == 0x01:  # Reset
                 logger.info(f'[{self.name}] → Reset')
-                if self.control_callback:
-                    self.control_callback('reset')
-                self.under_control = False
-                
-            elif opcode == 0x05:  # Set Target Power
-                if len(value) >= 3:
-                    power = struct.unpack('<H', value[1:3])[0]
-                    logger.info(f'[{self.name}] → Set Target Power: {power}W')
+                if self.under_control:
                     if self.control_callback:
-                        self.control_callback('power', power)
+                        self.control_callback('reset')
+                    self.under_control = False
+                    self._send_control_point_response(opcode, RESULT_SUCCESS)
+                else:
+                    logger.warning(f'[{self.name}] Reset without control')
+                    self._send_control_point_response(opcode, RESULT_CONTROL_NOT_PERMITTED)
+                
+            elif opcode == 0x05:  # Set Target Power (ERG mode)
+                logger.info(f'[{self.name}] → Set Target Power')
+                if self.under_control:
+                    if len(value) >= 3:
+                        power = struct.unpack('<H', value[1:3])[0]
+                        logger.info(f'[{self.name}]   Power: {power}W')
+                        if self.control_callback and self.control_callback('power', power):
+                            self._send_control_point_response(opcode, RESULT_SUCCESS)
+                        else:
+                            self._send_control_point_response(opcode, RESULT_OPERATION_FAILED)
+                    else:
+                        logger.warning(f'[{self.name}] Invalid power command length')
+                        self._send_control_point_response(opcode, RESULT_INVALID_PARAMETER)
+                else:
+                    logger.warning(f'[{self.name}] Set power without control')
+                    self._send_control_point_response(opcode, RESULT_CONTROL_NOT_PERMITTED)
                     
             elif opcode == 0x07:  # Start/Resume
                 logger.info(f'[{self.name}] → Start/Resume')
                 if self.control_callback:
                     self.control_callback('start')
+                self._send_control_point_response(opcode, RESULT_SUCCESS)
                 
             elif opcode == 0x08:  # Stop/Pause
                 logger.info(f'[{self.name}] → Stop/Pause')
                 if self.control_callback:
                     self.control_callback('stop')
+                self._send_control_point_response(opcode, RESULT_SUCCESS)
                 
-            elif opcode == 0x11:  # Set Indoor Bike Simulation Parameters
+            elif opcode == 0x11:  # Set Indoor Bike Simulation Parameters (SIM mode)
+                logger.info(f'[{self.name}] → Simulation Parameters')
                 if len(value) >= 7:
                     windspeed = struct.unpack('<h', value[1:3])[0] * 0.001
                     grade = struct.unpack('<h', value[3:5])[0] * 0.01
                     crr = value[5] * 0.0001 if len(value) > 5 else 0.005
                     cw = value[6] * 0.01 if len(value) > 6 else 0.39
                     
-                    logger.info(f'[{self.name}] → Simulation: wind={windspeed:.2f}m/s, grade={grade:.1f}%')
-                    if self.control_callback:
-                        self.control_callback('simulation', windspeed, grade, crr, cw)
+                    logger.info(f'[{self.name}]   Wind: {windspeed:.2f}m/s, Grade: {grade:.1f}%')
+                    if self.control_callback and self.control_callback('simulation', windspeed, grade, crr, cw):
+                        self._send_control_point_response(opcode, RESULT_SUCCESS)
+                    else:
+                        self._send_control_point_response(opcode, RESULT_OPERATION_FAILED)
+                else:
+                    logger.warning(f'[{self.name}] Invalid simulation command length')
+                    self._send_control_point_response(opcode, RESULT_INVALID_PARAMETER)
                     
             else:
                 logger.warning(f'[{self.name}] Unknown opcode: 0x{opcode:02X}')
+                self._send_control_point_response(opcode, RESULT_OP_CODE_NOT_SUPPORTED)
                 
         except Exception as e:
             logger.error(f'[{self.name}] Error handling control point: {e}')

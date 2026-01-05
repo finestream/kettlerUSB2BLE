@@ -118,15 +118,15 @@ python3 server.py
 You should see output like:
 ```
 [INFO] === Kettler USB to BLE Bridge ===
-[INFO] Pure Python implementation with bluez-peripheral
+[INFO] Pure Python implementation with bluezero
 [INFO] [BikeState] Starting
 [INFO] [KettlerUSB] Constructor
-[INFO] [KettlerBLE] Initializing
+[INFO] [KettlerBLE] Initializing on adapter XX:XX:XX:XX:XX:XX
 [INFO] Starting web server on port 3000...
 [INFO] [KettlerBLE] Starting BLE peripheral...
-[INFO] [KettlerBLE] Added FTMS service
-[INFO] [KettlerBLE] Added Cycling Power service
-[INFO] [KettlerBLE] ✓ BLE server started and advertising
+[INFO] [KettlerBLE] Added FTMS service with 5 characteristics
+[INFO] [KettlerBLE] Added Cycling Power service with 3 characteristics
+[INFO] [KettlerBLE] ✓ BLE server started and advertising as "KettlerBLE"
 [INFO] [KettlerBLE] Services exposed:
 [INFO] [KettlerBLE]   • Fitness Machine (FTMS) - 1826
 [INFO] [KettlerBLE]   • Cycling Power - 1818
@@ -143,7 +143,7 @@ Press **Ctrl+C** to stop. If you see errors, check [Troubleshooting](#troublesho
 
 ### 9. (Optional) Set Up Automatic Startup
 
-Crea8e a systemd service to auto-start the application on boot:
+Create a systemd service to auto-start the application on boot:
 
 ```bash
 sudo nano /etc/systemd/system/kettler.service
@@ -230,7 +230,7 @@ Kettler Bike USB Port
 - **Python 3.9+** - Main application language
 - **Flask + Flask-SocketIO** - Web server with WebSocket support
 - **PySerial** - USB serial communication
-- **bluezero** - BlueZ D-Bus bindings for proper GATT server
+- **bluezero 0.8.0** - BlueZ D-Bus bindings for proper GATT peripheral mode
 - **pyee** - Event emitter pattern
 
 **Key Services:**
@@ -295,15 +295,17 @@ python3 server.py  # Run directly to see errors
 1. Verify bike USB is connected and recognized (`ls /dev/ttyUSB*`)
 2. Check logs: `journalctl -u kettler -f`
 3. Look for `[KettlerUSB] read` messages - if missing, USB not communicating
-4. Make sure Zwift is actually connected (app should show connection icon)
-5. Try unplugging/replugging bike USB cable
-6. Sometimes requires app restart to start receiving notifications
+4. Make sure app has **subscribed to notifications** (look for `notifications ENABLED` in logs)
+5. Verify `characteristic.set_value()` push notifications in logs (`✓ Pushed` messages)
+6. Try unplugging/replugging bike USB cable
+7. Sometimes requires app restart to start receiving notifications
 
 ### BLE GATT errors
 
 - "org.bluez.Error.Failed" → BlueZ daemon issue, restart: `sudo systemctl restart bluetooth`
-- "Method not found" → bluezero version mismatch, reinstall: `pip3 install --upgrade bluezero`
-- Services not visible → Check with `bluetoothctl` on Pi: `gatt list-services KettlerBLE`
+- "Method not found" → bluezero version issue, reinstall: `pip3 install --upgrade bluezero`
+- "characteristic.set_value() AttributeError" → Client not subscribed, check notifications are enabled
+- Services not visible → Check with: `bluetoothctl`, then `scan on` to see "KettlerBLE" advertising
 
 ## Development
 
@@ -331,12 +333,13 @@ journalctl -u kettler -f  # Watch logs
 
 ### Adding New Features
 
-To add new GATT characteristics:
-1. Edit `kettler_ble.py` - add characteristic in service methods
-2. Add update method (e.g., `_update_new_characteristic()`)
-3. Call from `notify_ftms()` when data arrives
-4. No rebuild needed - Python!
-5. Restart: `sudo systemctl restart kettler`
+To add new GATT characteristics with push notifications:
+1. Edit `kettler_ble.py` - add characteristic in service methods with `notify_callback`
+2. Add notify callback handler to store characteristic reference when client subscribes
+3. Add update method (e.g., `_update_new_characteristic()`) with `characteristic.set_value()` call
+4. Call update method from `notify_ftms()` when data arrives
+5. No rebuild needed - Python!
+6. Restart: `sudo systemctl restart kettler`
 
 ### Testing Changes
 
@@ -352,15 +355,16 @@ python3 server.py
 ## Known Limitations
 
 - **Single BLE connection** - One fitness app at a time (standard for most trainers)
-- **D-Bus latency** - Small delay (~50ms) for GATT notifications via D-Bus
+- **D-Bus latency** - Small delay (~50ms) for GATT operations via D-Bus
 - **GPIO button support** - Requires additional RPi.GPIO package (not included by default)
+- **Push notifications** - Requires bluezero 0.8.0+ with `set_value()` support
 
 ## Performance
 
 On Pi Zero 2W:
 - **CPU Usage:** 3-5% (idle), 8-12% (active streaming)
-- **Memory:** ~80MB Python + Flask + BLE
-- **Response Time:** <50ms for all BLE notifications
+- **Memory:** ~80MB Python + Flask + bluezero
+- **Response Time:** <50ms for push notifications via `characteristic.set_value()`
 - **Power Consumption:** ~0.5W typical
 
 ## Contributing
@@ -411,4 +415,4 @@ Found a bug or want to improve? Open an issue or PR on GitHub.
 
 ---
 
-**Questions?** Check the GitHub issues or run with `node server.js` to see real-time output and debug.
+**Questions?** Check the GitHub issues or run with `python3 server.py` to see real-time output and debug.
