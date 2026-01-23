@@ -194,7 +194,7 @@ def setup_usb_events():
         
     def on_data(data):
         # Update bike state
-        logger.info
+        logger.info(f'USB Data received: {data}')
         if bike_state:
             bike_state.set_data(data)
         else:
