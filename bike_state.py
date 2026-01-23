@@ -66,6 +66,7 @@ class BikeState(EventEmitter):
         Args:
             data: Dict with speed, power, rpm, hr, targetPower, etc.
         """
+        logger.info(f'[BikeState] Bike data updated: {data}')
         self.data = data
         
         # Initialize target_power from bike data on first reception
@@ -74,6 +75,8 @@ class BikeState(EventEmitter):
             logger.info(f'[BikeState] Initialized targetPower from bike: {self.target_power}')
             self.emit('targetPower', self.target_power)
         
+        logger.info('[BikeState] calling compute()')
+
         # Trigger calculations
         self.compute()
         
