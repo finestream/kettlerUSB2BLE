@@ -206,17 +206,17 @@ class BikeState(EventEmitter):
         """
         # Skip if in ERG mode
         if self.mode == 'ERG':
-            logger.debug(f'[BikeState] ERG mode - skipping SIM computation')
+            logger.info(f'[BikeState] ERG mode - skipping SIM computation')
             return
             
         # Need bike data
         if self.data is None:
-            logger.debug(f'[BikeState] No bike data - skipping SIM computation')
+            logger.info(f'[BikeState] No bike data - skipping SIM computation')
             return
             
         # Need external conditions
         if self.external is None:
-            logger.debug(f'[BikeState] No external conditions - skipping SIM computation')
+            logger.info(f'[BikeState] No external conditions - skipping SIM computation')
             return
             
         # Get current RPM
@@ -232,7 +232,7 @@ class BikeState(EventEmitter):
         # Round to 1 decimal
         simpower = round(simpower, 1)
         
-        logger.debug(f'[BikeState] SIM - rpm: {rpm}, grade: {self.external["grade"]}, gear: {self.gear}, power: {simpower}')
+        logger.info(f'[BikeState] SIM - rpm: {rpm}, grade: {self.external["grade"]}, gear: {self.gear}, power: {simpower}')
         
         self.emit('simpower', simpower)
     
