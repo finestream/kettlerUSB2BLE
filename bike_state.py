@@ -87,13 +87,11 @@ class BikeState(EventEmitter):
         
     def gear_up(self):
         """Increase gear by 1"""
-        self.shift = False
         self.gear = min(MAX_GEAR, self.gear + 1)
         self.emit('gear', self.gear)
         
     def gear_down(self):
         """Decrease gear by 1"""
-        self.shift = False
         self.gear = max(MIN_GEAR, self.gear - 1)
         self.emit('gear', self.gear)
 
