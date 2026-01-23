@@ -105,11 +105,13 @@ class BikeState(EventEmitter):
         """Automatically shift gears based on cadence"""
         if self.data is None or 'rpm' not in self.data:
             return
+
+        logger.debug(f'[BikeState] Auto shift check at gear {self.gear}')
             
         rpm = self.data.get('rpm', 80)
         
         if rpm >= SHIFT_UP and self.gear < MAX_GEAR:
-            if selt.shift_up_start == False:
+            if self.shift_up_start == False:
                 self.time_stamp = time.time()
                 self.shift_up_timer = time.time() - self.time_stamp
                 self.shift_up_start = True
