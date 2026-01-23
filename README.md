@@ -17,10 +17,11 @@ Bridge your classic Kettler exercise bike to modern Bluetooth-enabled fitness ap
 
 ## Hardware Requirements
 
-- **Raspberry Pi Zero 2 W** (or any Pi with Bluetooth)
+- **Raspberry Pi Zero 2 W** (or any Pi with Bluetooth, works also on PI Zero W)
 - **Micro SD Card** (8GB minimum)
 - **USB Power Supply** (1A minimum)
 - **USB-A to Micro-USB Cable** (for connecting bike to Pi)
+- **USB to Serial adapter** (optional for older Kettler models with serial port)
 
 ## Setup (Quick Start)
 
@@ -29,8 +30,8 @@ Bridge your classic Kettler exercise bike to modern Bluetooth-enabled fitness ap
 Use **Raspberry Pi Imager** (download from https://www.raspberrypi.com/software/):
 
 1. Open Raspberry Pi Imager
-2. **Choose Device** → Raspberry Pi Zero 2 W
-3. **Choose OS** → Raspberry Pi OS (latest, 64-bit recommended)
+2. **Choose Device** → Pick the actual Raspberry Pi model you own e.g., Raspberry Pi Zero 2 W 
+3. **Choose OS** → Raspberry Pi OS Lite (latest, 64-bit recommended, to select the lite version go to Other)
 4. **Choose Storage** → Your SD card
 5. **Advanced Options** (click the gear icon):
    - **Hostname:** kettler
@@ -49,18 +50,20 @@ Find your Pi's IP address (check your router or use: `nmap -sn 192.168.1.0/24`)
 
 SSH into the Pi:
 ```bash
-ssh kettler@<pi-ip-address>
+ssh kettler@kettler.local
 # Password: (the one you set in Imager)
 ```
+
+if this does not work try replacing kettler.local with the ip address of your Raspberry PI
 
 ### 3. Install Python Dependencies
 
 ```bash
 # Update system packages
-sudo apt update
+sudo apt update && sudo apt upgrade -y
 
 # Install Python pip and Bluetooth libraries
-sudo apt install -y python3-pip python3-dev libdbus-1-dev libglib2.0-dev
+sudo apt install -y python3-pip python3-dev libdbus-1-dev libglib2.0-dev git python3-dbus
 
 # Verify Python 3 is installed (should be 3.9+)
 python3 --version
@@ -89,21 +92,23 @@ exit
 # SSH back in
 ```
 
-### 5. Copy Project to Pi
+### 5. Clone the repository to Pi
 
-From your computer (not the Pi):
 ```bash
-# Copy the project to your Pi
-scp -r /path/to/kettlerUSB2BLE kettler@<pi-ip-address>:~
+# Clone the repository to your Pi
+git clone https://github.com/bbashinskiy/kettlerUSB2BLE
 ```
 
 ### 6. Install Python Packages
 
-On the Pi:
 ```bash
 cd ~/kettlerUSB2BLE
 
-# Install Python dependencies
+# Create and activate virtual environment (newest Raspberry PI OS manage python from apt)
+python3 -m venv venv --system-site-packages
+source venv/bin/activate
+
+# Install Python dependencies you might get an error message that you can ignore (python can't replace system packages)
 pip3 install -r requirements.txt
 ```
 
