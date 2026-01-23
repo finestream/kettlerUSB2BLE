@@ -107,7 +107,7 @@ class BikeState(EventEmitter):
             return
 
         logger.debug(f'[BikeState] Auto shift check at gear {self.gear}')
-            
+
         rpm = self.data.get('rpm', 80)
         
         if rpm >= SHIFT_UP and self.gear < MAX_GEAR:
@@ -203,14 +203,17 @@ class BikeState(EventEmitter):
         """
         # Skip if in ERG mode
         if self.mode == 'ERG':
+            logger.debug(f'[BikeState] ERG mode - skipping SIM computation')
             return
             
         # Need bike data
         if self.data is None:
+            logger.debug(f'[BikeState] No bike data - skipping SIM computation')
             return
             
         # Need external conditions
         if self.external is None:
+            logger.debug(f'[BikeState] No external conditions - skipping SIM computation')
             return
             
         # Get current RPM
