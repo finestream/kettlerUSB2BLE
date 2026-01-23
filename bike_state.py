@@ -4,6 +4,7 @@ Handles modes (ERG/SIM), gear, target power, and physics calculations
 """
 
 import logging
+import time
 from pyee.base import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,9 @@ logger = logging.getLogger(__name__)
 MIN_GEAR = 1
 MAX_GEAR = 10
 
+SHIFT_UP = 88 # when the simuluation will automatically shift up
+SHIFT_DOWN = 72 # when the simulation will automatically shift down
+SHIFT_DELAY = 5  # seconds in the cadence range before shifting   
 
 class BikeState(EventEmitter):
     """
@@ -28,9 +32,17 @@ class BikeState(EventEmitter):
         # External conditions for simulation mode
         self.external = None
         
-        # Mode: 'ERG' (fixed power) or 'SIM' (physics simulation)
+        # Mode: 'ERG' (fixed power), 'SIM' (physics simulation), 
         self.mode = 'ERG'
         
+        # shift: automatic gear shifting state
+        self.shift = True
+        self.shift_up_timer = 0
+        self.shift_up_start = False
+        self.shift_down_timer = 0
+        self.shift_down_start = False
+        self.time_stamp = 0
+
         # Virtual gear (1-10)
         self.gear = 1
         
@@ -72,13 +84,63 @@ class BikeState(EventEmitter):
         
     def gear_up(self):
         """Increase gear by 1"""
+        self.shift = False
         self.gear = min(MAX_GEAR, self.gear + 1)
         self.emit('gear', self.gear)
         
     def gear_down(self):
         """Decrease gear by 1"""
+        self.shift = False
         self.gear = max(MIN_GEAR, self.gear - 1)
         self.emit('gear', self.gear)
+
+    def toggle_auto_shift(self):
+        """Enable or disable automatic gear shifting"""
+        self.shift = not self.shift
+        self.shift_up_start = False
+        self.shift_down_start = False
+        logger.info(f'[BikeState] Auto shift set to: {self.shift}')
+
+    def auto_shift(self):
+        """Automatically shift gears based on cadence"""
+        if self.data is None or 'rpm' not in self.data:
+            return
+            
+        rpm = self.data.get('rpm', 80)
+        
+        if rpm >= SHIFT_UP and self.gear < MAX_GEAR:
+            if selt.shift_up_start == False:
+                self.time_stamp = time.time()
+                self.shift_up_timer = time.time() - self.time_stamp
+                self.shift_up_start = True
+                self.shift_down_start = False
+                logger.debug(f'[BikeState] Auto shift up timer started at rpm {rpm} and time {self.time_stamp}')
+            else:
+                self.shift_up_timer = time.time() - self.time_stamp
+                logger.debug(f'[BikeState] Auto shift up timer: {self.shift_up_timer} seconds at rpm {rpm}')
+            if self.shift_up_timer >= SHIFT_DELAY:
+                self.gear_up()
+                self.shift_up_start = False
+                logger.debug(f'[BikeState] Auto shift up to gear {self.gear} at rpm {rpm}')
+            
+        elif rpm <= SHIFT_DOWN and self.gear > MIN_GEAR:
+            if self.shift_down_start == False:
+                self.time_stamp = time.time()
+                self.shift_down_timer = time.time() - self.time_stamp
+                self.shift_down_start = True
+                self.shift_up_start = False
+                logger.debug(f'[BikeState] Auto shift down timer started at rpm {rpm} and time {self.time_stamp}')
+            else:
+                self.shift_down_timer = time.time() - self.time_stamp
+                logger.debug(f'[BikeState] Auto shift down timer: {self.shift_down_timer} seconds at rpm {rpm}')
+            if self.shift_down_timer >= SHIFT_DELAY:
+                self.gear_down()
+                self.shift_down_start = False
+                logger.debug(f'[BikeState] Auto shift down to gear {self.gear} at rpm {rpm}')
+        
+        else:
+            self.shift_up_start = False
+            self.shift_down_start = False
         
     def set_target_power(self, power):
         """
@@ -165,3 +227,6 @@ class BikeState(EventEmitter):
         logger.debug(f'[BikeState] SIM - rpm: {rpm}, grade: {self.external["grade"]}, gear: {self.gear}, power: {simpower}')
         
         self.emit('simpower', simpower)
+    
+        if self.shift:  
+            self.auto_shift() # Automatic gear shifting based on cadence

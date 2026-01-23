@@ -83,6 +83,10 @@ def handle_key(key_event):
     elif key_event == 'GearDn':
         logger.info('Gear Down command')
         bike_state.gear_down()
+    elif key_event == 'shift':
+        logger.info('Toggle Shift command')
+        bike_state.toggle_auto_shift()
+        logger.info(f'Auto Shift set to: {bike_state.shift}')
     elif key_event == 'pause':
         logger.info('Pause command')
         bike_state.set_target_power(140)
@@ -160,7 +164,7 @@ def setup_bike_state_events():
         kettler_usb.set_power(sp) if kettler_usb else None
     ))
     bike_state.on('targetPower', lambda tp: socketio.emit('targetPower', tp))
-
+    bike_state.on('shift', lambda shift: socketio.emit('shift', shift))
 
 def setup_usb_events():
     """Configure event handlers for USB serial port"""

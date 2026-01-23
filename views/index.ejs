@@ -33,7 +33,7 @@
 		.data-row {
 			grid-column: 1 / -1;
 			display: grid;
-			grid-template-columns: repeat(5, 1fr);
+			grid-template-columns: repeat(3, 1fr);
 			gap: 5px;
 		}
 		
@@ -214,6 +214,14 @@
 			$('#grade').html(data);
          });
 		 
+		socket.on('shift', function (data) {
+			if (data) {
+				$('#shiftBtn').addClass('active').html('Auto Shift: ON');
+			} else {
+				$('#shiftBtn').removeClass('active').html('Auto Shift: OFF');
+			}
+		 });
+
 		 socket.on('mode', function (data) {  
 			$('#mode').html(data);
 			
@@ -340,7 +348,7 @@
 </div>
 
 <div id="phone">
-	<!-- ROW 1: Data (Speed, Power, HR, Wind, Grade) - All visible always -->
+	<!-- ROW 1: Data (Speed, Power, Target Power) - All visible always -->
 	<div class="data-row">
 		<div class="cell data-cell"> 
 			<div class="BoldH">Speed</div>
@@ -352,6 +360,14 @@
 			<div class="numbers" id="power">0</div>
 			<div class="unit">W</div>
 		</div>
+		<div class="cell data-cell">
+			<div class="BoldH">Target</div>
+			<div class="numbers" id="targetPower">100</div>
+			<div class="unit">W</div>
+		</div>
+	</div>
+	<!-- ROW 2: Data (HR, Wind, Grade) - All visible always -->
+	<div class="data-row">
 		<div class="cell data-cell">
 			<div class="BoldH">HR</div>
 			<div class="numbers" id="hr">0</div>
@@ -369,7 +385,7 @@
 		</div>
 	</div>
 	
-	<!-- ROW 2: Control Left | MODE | Control Right -->
+	<!-- ROW 3: Control Left | MODE | Control Right -->
 	<!-- Grid Cell 1 (left): -Power (ERG) or -Gear (SIM) -->
 	<div class="cell" id="cellLeft">
 		<button data-value="PowerDn" id="keyLeft" class="control-btn">- Pwr</button>
@@ -385,7 +401,10 @@
 		<button data-value="PowerUp" id="keyRight" class="control-btn">+ Pwr</button>
 	</div>
 	
-	<!-- ROW 3: Gear | Pause | Target Power -->
+	<!-- ROW 4: shift mode | Gear | Pause -->
+	<div class="cell" id="shift_cell">
+		<button data-value="shift" id="shiftBtn" class="control-btn">Auto Shift</button>
+	</div>
 	<div class="cell data-cell"> 
 		<div class="BoldH">Gear</div>
 		<div class="numbers" id="gear">1</div>   
@@ -393,11 +412,7 @@
 	<div class="cell">
 		<button data-value="pause" id="pauseBtn">PAUSE</button>
 	</div>
-	<div class="cell data-cell">
-		<div class="BoldH">Target</div>
-		<div class="numbers" id="targetPower">100</div>
-		<div class="unit">W</div>
-	</div>
+
 </div>
    
    </body>
