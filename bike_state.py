@@ -109,7 +109,7 @@ class BikeState(EventEmitter):
         if self.data is None or 'rpm' not in self.data:
             return
 
-        logger.debug(f'[BikeState] Auto shift check at gear {self.gear}')
+        logger.info(f'[BikeState] Auto shift check at gear {self.gear}')
 
         rpm = self.data.get('rpm', 80)
         
@@ -119,14 +119,14 @@ class BikeState(EventEmitter):
                 self.shift_up_timer = time.time() - self.time_stamp
                 self.shift_up_start = True
                 self.shift_down_start = False
-                logger.debug(f'[BikeState] Auto shift up timer started at rpm {rpm} and time {self.time_stamp}')
+                logger.info(f'[BikeState] Auto shift up timer started at rpm {rpm} and time {self.time_stamp}')
             else:
                 self.shift_up_timer = time.time() - self.time_stamp
-                logger.debug(f'[BikeState] Auto shift up timer: {self.shift_up_timer} seconds at rpm {rpm}')
+                logger.info(f'[BikeState] Auto shift up timer: {self.shift_up_timer} seconds at rpm {rpm}')
             if self.shift_up_timer >= SHIFT_DELAY:
                 self.gear_up()
                 self.shift_up_start = False
-                logger.debug(f'[BikeState] Auto shift up to gear {self.gear} at rpm {rpm}')
+                logger.info(f'[BikeState] Auto shift up to gear {self.gear} at rpm {rpm}')
             
         elif rpm <= SHIFT_DOWN and self.gear > MIN_GEAR:
             if self.shift_down_start == False:
@@ -134,14 +134,14 @@ class BikeState(EventEmitter):
                 self.shift_down_timer = time.time() - self.time_stamp
                 self.shift_down_start = True
                 self.shift_up_start = False
-                logger.debug(f'[BikeState] Auto shift down timer started at rpm {rpm} and time {self.time_stamp}')
+                logger.info(f'[BikeState] Auto shift down timer started at rpm {rpm} and time {self.time_stamp}')
             else:
                 self.shift_down_timer = time.time() - self.time_stamp
-                logger.debug(f'[BikeState] Auto shift down timer: {self.shift_down_timer} seconds at rpm {rpm}')
+                logger.info(f'[BikeState] Auto shift down timer: {self.shift_down_timer} seconds at rpm {rpm}')
             if self.shift_down_timer >= SHIFT_DELAY:
                 self.gear_down()
                 self.shift_down_start = False
-                logger.debug(f'[BikeState] Auto shift down to gear {self.gear} at rpm {rpm}')
+                logger.info(f'[BikeState] Auto shift down to gear {self.gear} at rpm {rpm}')
         
         else:
             self.shift_up_start = False
