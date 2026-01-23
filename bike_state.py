@@ -101,6 +101,7 @@ class BikeState(EventEmitter):
         self.shift_up_start = False
         self.shift_down_start = False
         logger.info(f'[BikeState] Auto shift set to: {self.shift}')
+        self.emit('shift', self.shift)
 
     def auto_shift(self):
         """Automatically shift gears based on cadence"""
