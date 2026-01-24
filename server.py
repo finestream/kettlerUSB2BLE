@@ -196,7 +196,7 @@ def setup_usb_events():
         # Update bike state
         if bike_state:
             bike_state.set_data(data)
-
+        
         # Send to web clients
         if 'speed' in data:
             socketio.emit('speed', f"{data['speed']:.1f}")

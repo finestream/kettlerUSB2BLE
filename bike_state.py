@@ -32,7 +32,7 @@ class BikeState(EventEmitter):
         # External conditions for simulation mode
         self.external = None
         
-        # Mode: 'ERG' (fixed power) or 'SIM' (physics simulation), 
+        # Mode: 'ERG' (fixed power) or 'SIM' (physics simulation)
         self.mode = 'ERG'
         
         # shift: automatic gear shifting state
