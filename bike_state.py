@@ -32,7 +32,7 @@ class BikeState(EventEmitter):
         # External conditions for simulation mode
         self.external = None
         
-        # Mode: 'ERG' (fixed power), 'SIM' (physics simulation), 
+        # Mode: 'ERG' (fixed power) or 'SIM' (physics simulation), 
         self.mode = 'ERG'
         
         # shift: automatic gear shifting state
@@ -66,7 +66,6 @@ class BikeState(EventEmitter):
         Args:
             data: Dict with speed, power, rpm, hr, targetPower, etc.
         """
-        logger.info(f'[BikeState] Bike data updated: {data}')
         self.data = data
         
         # Initialize target_power from bike data on first reception
@@ -75,8 +74,6 @@ class BikeState(EventEmitter):
             logger.info(f'[BikeState] Initialized targetPower from bike: {self.target_power}')
             self.emit('targetPower', self.target_power)
         
-        logger.info('[BikeState] calling compute()')
-
         # Trigger calculations
         self.compute()
         
@@ -205,17 +202,14 @@ class BikeState(EventEmitter):
         """
         # Skip if in ERG mode
         if self.mode == 'ERG':
-            logger.info(f'[BikeState] ERG mode - skipping SIM computation')
             return
             
         # Need bike data
         if self.data is None:
-            logger.info(f'[BikeState] No bike data - skipping SIM computation')
             return
             
         # Need external conditions
         if self.external is None:
-            logger.info(f'[BikeState] No external conditions - skipping SIM computation')
             return
             
         # Get current RPM
@@ -231,7 +225,7 @@ class BikeState(EventEmitter):
         # Round to 1 decimal
         simpower = round(simpower, 1)
         
-        logger.info(f'[BikeState] SIM - rpm: {rpm}, grade: {self.external["grade"]}, gear: {self.gear}, power: {simpower}')
+        logger.debug(f'[BikeState] SIM - rpm: {rpm}, grade: {self.external["grade"]}, gear: {self.gear}, power: {simpower}')
         
         self.emit('simpower', simpower)
     

@@ -194,11 +194,8 @@ def setup_usb_events():
         
     def on_data(data):
         # Update bike state
-        logger.info(f'USB Data received: {data}')
         if bike_state:
             bike_state.set_data(data)
-        else:
-            logger.info('No bike state to update with USB data')
 
         # Send to web clients
         if 'speed' in data:
